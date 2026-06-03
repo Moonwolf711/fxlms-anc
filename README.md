@@ -80,6 +80,19 @@ experiments/spectrum.py    PSD before/after + per-band cancellation
 experiments/secondary_error.py  Ŝ-mismatch sweeps (sign / delay / gain)
 ```
 
+## Limitations
+
+This is a teaching/simulation repo — faithful to the FxLMS algorithm and its failure modes, but not a hardware-validated controller. Specifically:
+
+- **Modeled acoustic paths, not measured.** `P` and `S` are short decaying-FIR approximations (`default_paths`), not impulse responses captured from a real enclosure. Real paths are longer, non-minimum-phase, and vary with temperature, fit, and head movement.
+- **Feed-forward only.** Real ANC earbuds use a **hybrid** topology (feed-forward reference mic + feedback error mic in the ear). The feedback path adds its own stability constraints this repo doesn't model.
+- **Offline secondary-path ID.** `Ŝ` is learned once up front from a clean white-noise pass. Production systems run **online** identification — continuously injecting a low-level probe to track `S` as it drifts — which is itself a source of residual noise and complexity.
+- **Fixed step size.** A single tuned `μ`, not the normalized/variable-step or leaky variants (FxNLMS, leaky FxLMS) that real systems use for robustness to `Ŝ` error and non-stationary noise.
+- **No fixed-point / latency budget.** Float64, block-convolution, no per-sample compute or group-delay constraints. On real hardware the controller must run inside one sample period, and the secondary-path delay sets a hard ceiling on achievable cancellation.
+- **Stationary, full-band reference.** The reference is assumed clean and perfectly correlated with the disturbance. Real reference mics pick up wind, the user's own voice, and uncorrelated noise that no feed-forward controller can cancel.
+
+The experiments are designed to show *why* these things matter — `secondary_error.py` in particular demonstrates the `Ŝ`-accuracy problem that drives most of the above.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
